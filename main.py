@@ -13,6 +13,8 @@ LARGURA = 60
 
 # Fila de processos esperando a CPU: entra pelo fim e sai pelo início
 fila_processos = deque()
+# Pilha de chamadas: a última rotina chamada é a primeira a terminar
+pilha_chamadas = []
 
 
 def imprimir_titulo(texto):
@@ -121,9 +123,67 @@ def menu_fila():
     }, "Voltar")
 
 
+def ler_tipo_chamada():
+    while True:
+        opcao = input("  Tipo [1] Subrotina  [2] Interrupção: ").strip()
+        if opcao == "1":
+            return "Subrotina"
+        if opcao == "2":
+            return "Interrupção"
+        imprimir_aviso("Escolha 1 ou 2.")
+
+
+def pilha_empilhar():
+    identificador = ler_texto("ID da chamada")
+    rotina = ler_texto("Nome da rotina")
+    tipo = ler_tipo_chamada()
+    # Na pilha a chamada nova sempre vai para o topo, que é o final da lista
+    pilha_chamadas.append({"id": identificador, "rotina": rotina, "tipo": tipo})
+    imprimir_aviso(f"Chamada {identificador} empilhada no topo.")
+
+
+def pilha_listar():
+    if esta_vazia(pilha_chamadas, "A pilha de chamadas"):
+        return
+    print(f"\n  {'':<8}{'ID':<14}{'ROTINA':<26}{'TIPO'}")
+    # Percorre a lista de trás pra frente para mostrar o topo primeiro
+    for posicao, chamada in enumerate(reversed(pilha_chamadas)):
+        marcador = "TOPO >" if posicao == 0 else ""
+        print(f"  {marcador:<8}{chamada['id']:<14}{chamada['rotina']:<26}{chamada['tipo']}")
+
+
+def pilha_atualizar_topo():
+    if esta_vazia(pilha_chamadas, "A pilha de chamadas"):
+        return
+    # Na pilha só dá pra mexer no topo, que é o último item da lista
+    chamada = pilha_chamadas[-1]
+    print(f"\n  Topo atual: {chamada['id']} | {chamada['rotina']} | {chamada['tipo']}")
+    chamada["rotina"] = ler_texto("Novo nome da rotina")
+    chamada["tipo"] = ler_tipo_chamada()
+    imprimir_aviso(f"Chamada {chamada['id']} atualizada.")
+
+
+def pilha_desempilhar():
+    if esta_vazia(pilha_chamadas, "A pilha de chamadas"):
+        return
+    # O pop sem índice remove o último item, ou seja, o topo da pilha
+    chamada = pilha_chamadas.pop()
+    imprimir_aviso(f"Chamada {chamada['id']} ({chamada['rotina']}) terminou e saiu do topo.")
+
+
+def menu_pilha():
+    executar_menu("PILHA DE CHAMADAS E INTERRUPÇÕES", {
+        "1": ("Empilhar chamada no topo", pilha_empilhar),
+        "2": ("Listar pilha", pilha_listar),
+        "3": ("Atualizar chamada do topo", pilha_atualizar_topo),
+        "4": ("Desempilhar chamada do topo", pilha_desempilhar),
+    }, "Voltar")
+
+
 def menu_principal():
     opcoes = {
         "1": ("Fila de escalonamento da CPU", menu_fila),
+        "2": ("Pilha de chamadas e interrupções", menu_pilha),
     }
     executar_menu("SIMULADOR DE SISTEMA OPERACIONAL", opcoes, "Sair")
     print("\n  Sistema encerrado. Até a próxima!\n")
