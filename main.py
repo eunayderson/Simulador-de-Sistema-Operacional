@@ -15,6 +15,8 @@ LARGURA = 60
 fila_processos = deque()
 # Pilha de chamadas: a última rotina chamada é a primeira a terminar
 pilha_chamadas = []
+# Lista de processos ativos em segundo plano, acessados pelo índice
+lista_ativos = []
 
 
 def imprimir_titulo(texto):
@@ -180,10 +182,73 @@ def menu_pilha():
     }, "Voltar")
 
 
+def lista_adicionar():
+    pid = ler_texto("PID do processo")
+    nome = ler_texto("Nome do processo")
+    memoria = ler_inteiro("Memória usada (MB)")
+    estado = ler_texto("Estado (ex: Executando, Suspenso)")
+    lista_ativos.append({"pid": pid, "nome": nome, "memoria": memoria, "estado": estado})
+    imprimir_aviso(f"Processo {pid} adicionado no índice {len(lista_ativos) - 1}.")
+
+
+def lista_listar():
+    if esta_vazia(lista_ativos, "A lista de processos ativos"):
+        return
+    print(f"\n  {'ÍNDICE':<8}{'PID':<10}{'NOME':<22}{'MEMÓRIA':>10}  {'ESTADO'}")
+    for indice, processo in enumerate(lista_ativos):
+        print(f"  {indice:<8}{processo['pid']:<10}{processo['nome']:<22}"
+              f"{processo['memoria']:>7} MB  {processo['estado']}")
+
+
+def ler_indice_lista():
+    lista_listar()
+    indice = ler_inteiro("Índice do processo")
+    # Confere se o índice existe antes de acessar a lista
+    if indice >= len(lista_ativos):
+        imprimir_aviso(f"O índice {indice} não existe na lista.")
+        return None
+    return indice
+
+
+def lista_atualizar():
+    if esta_vazia(lista_ativos, "A lista de processos ativos"):
+        return
+    indice = ler_indice_lista()
+    if indice is None:
+        return
+    # Acessa o processo direto pela posição dele na lista
+    processo = lista_ativos[indice]
+    processo["nome"] = ler_texto("Novo nome")
+    processo["memoria"] = ler_inteiro("Nova memória usada (MB)")
+    processo["estado"] = ler_texto("Novo estado")
+    imprimir_aviso(f"Processo do índice {indice} atualizado.")
+
+
+def lista_remover():
+    if esta_vazia(lista_ativos, "A lista de processos ativos"):
+        return
+    indice = ler_indice_lista()
+    if indice is None:
+        return
+    # O pop com índice tira o processo exatamente daquela posição
+    processo = lista_ativos.pop(indice)
+    imprimir_aviso(f"Processo {processo['pid']} ({processo['nome']}) foi encerrado.")
+
+
+def menu_lista():
+    executar_menu("TABELA DE PROCESSOS ATIVOS", {
+        "1": ("Adicionar processo", lista_adicionar),
+        "2": ("Listar processos", lista_listar),
+        "3": ("Atualizar processo pelo índice", lista_atualizar),
+        "4": ("Remover processo pelo índice", lista_remover),
+    }, "Voltar")
+
+
 def menu_principal():
     opcoes = {
         "1": ("Fila de escalonamento da CPU", menu_fila),
         "2": ("Pilha de chamadas e interrupções", menu_pilha),
+        "3": ("Tabela de processos ativos", menu_lista),
     }
     executar_menu("SIMULADOR DE SISTEMA OPERACIONAL", opcoes, "Sair")
     print("\n  Sistema encerrado. Até a próxima!\n")
