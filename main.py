@@ -17,6 +17,8 @@ fila_processos = deque()
 pilha_chamadas = []
 # Lista de processos ativos em segundo plano, acessados pelo índice
 lista_ativos = []
+# Árvore do sistema de arquivos feita com dicionários dentro de dicionários
+arvore_arquivos = {}
 
 
 def imprimir_titulo(texto):
@@ -244,11 +246,136 @@ def menu_lista():
     }, "Voltar")
 
 
+def ler_caminho(mensagem):
+    while True:
+        caminho = input(f"  {mensagem}: ").strip()
+        if SEPARADOR in caminho:
+            imprimir_aviso(f"O caractere '{SEPARADOR}' não é permitido.")
+            continue
+        # Transforma "home/aluno/docs" na lista ["home", "aluno", "docs"]
+        return [parte.strip() for parte in caminho.split("/") if parte.strip()]
+
+
+def arvore_buscar(partes):
+    # Desce na árvore uma pasta por vez seguindo o caminho
+    no = arvore_arquivos
+    for parte in partes:
+        if parte not in no:
+            return None
+        no = no[parte]
+    return no
+
+
+def nome_valido(nome, pasta):
+    if "/" in nome:
+        imprimir_aviso("O nome não pode ter '/'.")
+        return False
+    if nome in pasta:
+        imprimir_aviso(f"Já existe um item chamado '{nome}' nessa pasta.")
+        return False
+    return True
+
+
+def arvore_imprimir(no, nivel):
+    for nome, filhos in no.items():
+        print("  " + "    " * nivel + "└── " + nome)
+        # A função chama ela mesma para mostrar o que existe dentro deste item
+        arvore_imprimir(filhos, nivel + 1)
+
+
+def arvore_listar():
+    if esta_vazia(arvore_arquivos, "A árvore de arquivos"):
+        return
+    print("\n  /")
+    arvore_imprimir(arvore_arquivos, 0)
+
+
+def arvore_criar():
+    if arvore_arquivos:
+        arvore_listar()
+    partes_pai = ler_caminho("Pasta onde criar (ex: home/aluno, ENTER para a raiz)")
+    pai = arvore_buscar(partes_pai)
+    if pai is None:
+        imprimir_aviso("Caminho não encontrado.")
+        return
+    nome = ler_texto("Nome do novo item")
+    if not nome_valido(nome, pai):
+        return
+    # Cada item é um dicionário vazio que pode receber outros itens dentro dele
+    pai[nome] = {}
+    imprimir_aviso(f"Item /{'/'.join(partes_pai + [nome])} criado.")
+
+
+def arvore_ver_pasta():
+    if esta_vazia(arvore_arquivos, "A árvore de arquivos"):
+        return
+    partes = ler_caminho("Caminho da pasta (ex: home/aluno)")
+    pasta = arvore_buscar(partes)
+    if pasta is None:
+        imprimir_aviso("Caminho não encontrado.")
+        return
+    print(f"\n  /{'/'.join(partes)}")
+    if not pasta:
+        print("      (pasta vazia)")
+    arvore_imprimir(pasta, 1)
+
+
+def arvore_localizar_item():
+    partes = ler_caminho("Caminho completo do item (ex: home/aluno/notas.txt)")
+    if not partes:
+        imprimir_aviso("A raiz não pode ser alterada.")
+        return None, None
+    # O pai é tudo menos a última parte do caminho, que é o nome do item
+    pai = arvore_buscar(partes[:-1])
+    if pai is None or partes[-1] not in pai:
+        imprimir_aviso("Item não encontrado.")
+        return None, None
+    return pai, partes[-1]
+
+
+def arvore_renomear():
+    if esta_vazia(arvore_arquivos, "A árvore de arquivos"):
+        return
+    arvore_listar()
+    pai, nome = arvore_localizar_item()
+    if pai is None:
+        return
+    novo_nome = ler_texto("Novo nome")
+    if not nome_valido(novo_nome, pai):
+        return
+    # O pop tira o item antigo e devolve o conteúdo dele, que fica guardado no novo nome
+    pai[novo_nome] = pai.pop(nome)
+    imprimir_aviso(f"'{nome}' renomeado para '{novo_nome}'.")
+
+
+def arvore_remover():
+    if esta_vazia(arvore_arquivos, "A árvore de arquivos"):
+        return
+    arvore_listar()
+    pai, nome = arvore_localizar_item()
+    if pai is None:
+        return
+    # Apagar a chave remove o item e tudo que estiver dentro dele
+    del pai[nome]
+    imprimir_aviso(f"'{nome}' e todo o seu conteúdo foram removidos.")
+
+
+def menu_arvore():
+    executar_menu("SISTEMA DE ARQUIVOS E DIRETÓRIOS", {
+        "1": ("Criar pasta ou arquivo", arvore_criar),
+        "2": ("Mostrar árvore completa", arvore_listar),
+        "3": ("Ver conteúdo de uma pasta", arvore_ver_pasta),
+        "4": ("Renomear item", arvore_renomear),
+        "5": ("Remover item", arvore_remover),
+    }, "Voltar")
+
+
 def menu_principal():
     opcoes = {
         "1": ("Fila de escalonamento da CPU", menu_fila),
         "2": ("Pilha de chamadas e interrupções", menu_pilha),
         "3": ("Tabela de processos ativos", menu_lista),
+        "4": ("Sistema de arquivos e diretórios", menu_arvore),
     }
     executar_menu("SIMULADOR DE SISTEMA OPERACIONAL", opcoes, "Sair")
     print("\n  Sistema encerrado. Até a próxima!\n")
