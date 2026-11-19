@@ -370,12 +370,49 @@ def menu_arvore():
     }, "Voltar")
 
 
+def montar_linha(identificador, *campos):
+    # Junta o identificador e os campos usando o separador, formando uma linha do arquivo
+    return SEPARADOR.join([identificador] + [str(campo) for campo in campos])
+
+
+def arvore_caminhos(no, caminho_atual):
+    # Guarda o caminho completo até cada item que não tem nada dentro (as folhas)
+    caminhos = []
+    for nome, filhos in no.items():
+        caminho = caminho_atual + [nome]
+        if filhos:
+            caminhos.extend(arvore_caminhos(filhos, caminho))
+        else:
+            caminhos.append(caminho)
+    return caminhos
+
+
+def salvar_dados():
+    linhas = []
+    for p in lista_ativos:
+        linhas.append(montar_linha("LISTA", p["pid"], p["nome"], p["memoria"], p["estado"]))
+    # A fila é gravada do início ao fim para manter a ordem de chegada
+    for p in fila_processos:
+        linhas.append(montar_linha("FILA", p["pid"], p["nome"], p["tempo"]))
+    # A pilha é gravada da base até o topo para voltar na mesma ordem
+    for c in pilha_chamadas:
+        linhas.append(montar_linha("PILHA", c["id"], c["rotina"], c["tipo"]))
+    for caminho in arvore_caminhos(arvore_arquivos, []):
+        linhas.append(montar_linha("ARVORE", *caminho))
+
+    with open(ARQUIVO_DADOS, "w", encoding="utf-8") as arquivo:
+        for linha in linhas:
+            arquivo.write(linha + "\n")
+    imprimir_aviso(f"{len(linhas)} registro(s) salvos em {ARQUIVO_DADOS}.")
+
+
 def menu_principal():
     opcoes = {
         "1": ("Fila de escalonamento da CPU", menu_fila),
         "2": ("Pilha de chamadas e interrupções", menu_pilha),
         "3": ("Tabela de processos ativos", menu_lista),
         "4": ("Sistema de arquivos e diretórios", menu_arvore),
+        "5": ("Salvar dados", salvar_dados),
     }
     executar_menu("SIMULADOR DE SISTEMA OPERACIONAL", opcoes, "Sair")
     print("\n  Sistema encerrado. Até a próxima!\n")
