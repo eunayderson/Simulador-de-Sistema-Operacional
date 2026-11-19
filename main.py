@@ -406,6 +406,47 @@ def salvar_dados():
     imprimir_aviso(f"{len(linhas)} registro(s) salvos em {ARQUIVO_DADOS}.")
 
 
+def arvore_inserir_caminho(partes):
+    no = arvore_arquivos
+    for parte in partes:
+        # O setdefault cria a pasta se ela ainda não existir e já entra nela
+        no = no.setdefault(parte, {})
+
+
+def carregar_dados():
+    try:
+        with open(ARQUIVO_DADOS, "r", encoding="utf-8") as arquivo:
+            linhas = arquivo.read().splitlines()
+    except FileNotFoundError:
+        imprimir_aviso(f"O arquivo {ARQUIVO_DADOS} ainda não existe. Salve os dados primeiro.")
+        return
+
+    # Limpa a memória antes de reconstruir tudo a partir do arquivo
+    lista_ativos.clear()
+    fila_processos.clear()
+    pilha_chamadas.clear()
+    arvore_arquivos.clear()
+
+    for linha in linhas:
+        if not linha.strip():
+            continue
+        # O primeiro campo diz de qual estrutura é a linha, o resto são os dados
+        identificador, *dados = linha.split(SEPARADOR)
+        if identificador == "LISTA":
+            pid, nome, memoria, estado = dados
+            lista_ativos.append({"pid": pid, "nome": nome, "memoria": int(memoria), "estado": estado})
+        elif identificador == "FILA":
+            pid, nome, tempo = dados
+            fila_processos.append({"pid": pid, "nome": nome, "tempo": int(tempo)})
+        elif identificador == "PILHA":
+            identificador_chamada, rotina, tipo = dados
+            pilha_chamadas.append({"id": identificador_chamada, "rotina": rotina, "tipo": tipo})
+        elif identificador == "ARVORE":
+            arvore_inserir_caminho(dados)
+
+    imprimir_aviso(f"Dados carregados de {ARQUIVO_DADOS}.")
+
+
 def menu_principal():
     opcoes = {
         "1": ("Fila de escalonamento da CPU", menu_fila),
@@ -413,6 +454,7 @@ def menu_principal():
         "3": ("Tabela de processos ativos", menu_lista),
         "4": ("Sistema de arquivos e diretórios", menu_arvore),
         "5": ("Salvar dados", salvar_dados),
+        "6": ("Carregar dados", carregar_dados),
     }
     executar_menu("SIMULADOR DE SISTEMA OPERACIONAL", opcoes, "Sair")
     print("\n  Sistema encerrado. Até a próxima!\n")
